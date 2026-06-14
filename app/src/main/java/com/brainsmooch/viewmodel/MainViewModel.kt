@@ -43,6 +43,7 @@ data class UiState(
     val isAdminActive: Boolean = false,
     val isAccessibilityEnabled: Boolean = false,
     val hasUsageStatsPermission: Boolean = false,
+    val isAlwaysOnVpnEnabled: Boolean = false,
     val hardcoreMode: Boolean = false,
     val vpnPrepareIntent: Intent? = null,
     val vpnResumeIntent: Intent? = null,
@@ -50,7 +51,7 @@ data class UiState(
     val confirmationStep: Int = 0
 ) {
     val isFullyProtected: Boolean
-        get() = isAdminActive && isAccessibilityEnabled
+        get() = isAdminActive && isAccessibilityEnabled && isAlwaysOnVpnEnabled
 
     val hasDuration: Boolean
         get() = unlimitedMode || days > 0 || hours > 0 || minutes > 0
@@ -245,10 +246,30 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 isAdminActive = mdmManager.isAdminActive,
                 isAccessibilityEnabled = BlockGuardAccessibilityService.isEnabled(getApplication()),
                 hasUsageStatsPermission = AppBlockerManager.hasUsageStatsPermission(getApplication()),
+                isAlwaysOnVpnEnabled = isAlwaysOnVpnEnabled(),
                 hardcoreMode = GuardState.isHardcore(getApplication())
             )
         }
     }
+
+    private fun isAlwaysOnVpnEnabled(): Boolean {
+        // No hay API pública para detectar esto sin permisos especiales
+        // Usamos SharedPreferences para trackear si el usuario lo configuró
+        return getApplication<Application>()
+            .getSharedPreferences("guard_state", android.content.Context.MODE_PRIVATE)
+            .getBoolean("always_on_vpn_configured", false)
+    }
+
+    fun markAlwaysOnVpnConfigured() {
+        getApplication<Application>()
+            .getSharedPreferences("guard_state", android.content.Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean("always_on_vpn_configured", true)
+            .apply()
+        refreshPermissions()
+    }
+
+    fun vpnSettingsIntent(): Intent = Intent(android.provider.Settings.ACTION_VPN_SETTINGS)
 
     fun checkVpnResumeNeeded() {
         if (TEST_MODE) return

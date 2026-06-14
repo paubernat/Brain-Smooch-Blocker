@@ -167,6 +167,7 @@ fun MainScreen(
     onHardcoreModeChange: (Boolean) -> Unit,
     onEnableAdmin: () -> Unit,
     onEnableAccessibility: () -> Unit,
+    onEnableAlwaysOnVpn: () -> Unit,
     onEnableUsageStats: () -> Unit,
     onReleaseBlock: () -> Unit,
     onPanicPasswordSubmit: (String, (Boolean) -> Unit) -> Unit,
@@ -232,8 +233,10 @@ fun MainScreen(
                     ProtectionStatus(
                         isAdminActive = uiState.isAdminActive,
                         isAccessibilityEnabled = uiState.isAccessibilityEnabled,
+                        isAlwaysOnVpnEnabled = uiState.isAlwaysOnVpnEnabled,
                         onEnableAdmin = onEnableAdmin,
-                        onEnableAccessibility = onEnableAccessibility
+                        onEnableAccessibility = onEnableAccessibility,
+                        onEnableAlwaysOnVpn = onEnableAlwaysOnVpn
                     )
                 }
 
@@ -547,10 +550,12 @@ private fun HeartExplosion(onFinished: () -> Unit) {
 private fun ProtectionStatus(
     isAdminActive: Boolean,
     isAccessibilityEnabled: Boolean,
+    isAlwaysOnVpnEnabled: Boolean,
     onEnableAdmin: () -> Unit,
-    onEnableAccessibility: () -> Unit
+    onEnableAccessibility: () -> Unit,
+    onEnableAlwaysOnVpn: () -> Unit
 ) {
-    if (isAdminActive && isAccessibilityEnabled) {
+    if (isAdminActive && isAccessibilityEnabled && isAlwaysOnVpnEnabled) {
         Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer), modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.protection_active), modifier = Modifier.padding(12.dp), color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.bodyMedium)
         }
@@ -568,6 +573,10 @@ private fun ProtectionStatus(
             }
             if (!isAccessibilityEnabled) {
                 Button(onClick = onEnableAccessibility, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.enable_accessibility)) }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+            if (!isAlwaysOnVpnEnabled) {
+                Button(onClick = onEnableAlwaysOnVpn, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.enable_always_on_vpn)) }
             }
         }
     }

@@ -51,6 +51,12 @@ class MainActivity : ComponentActivity() {
         viewModel.refreshPermissions()
     }
 
+    private val alwaysOnVpnLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        viewModel.markAlwaysOnVpnConfigured()
+    }
+
     private val usageStatsLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) {
@@ -106,6 +112,9 @@ class MainActivity : ComponentActivity() {
                         onEnableAdmin = { adminLauncher.launch(viewModel.adminIntent()) },
                         onEnableAccessibility = {
                             accessibilityLauncher.launch(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                        },
+                        onEnableAlwaysOnVpn = {
+                            alwaysOnVpnLauncher.launch(viewModel.vpnSettingsIntent())
                         },
                         onEnableUsageStats = {
                             usageStatsLauncher.launch(viewModel.usageStatsIntent())

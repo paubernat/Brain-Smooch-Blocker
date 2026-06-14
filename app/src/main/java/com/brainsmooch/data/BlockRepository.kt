@@ -39,6 +39,11 @@ class BlockRepository(private val context: Context) {
         passwordHash: String? = null
     ) {
         val endTime = System.currentTimeMillis() + durationMillis
+
+        // Guardar en SharedPreferences primero (más robusto)
+        GuardState.saveBlockState(context, domains, apps, endTime, passwordHash != null)
+
+        // También guardar en DataStore
         context.dataStore.edit { prefs ->
             prefs[Keys.IS_ACTIVE] = true
             prefs[Keys.END_TIME] = endTime
@@ -50,7 +55,6 @@ class BlockRepository(private val context: Context) {
                 prefs.remove(Keys.PANIC_PASSWORD_HASH)
             }
         }
-        GuardState.setBlockActive(context, true)
     }
 
     suspend fun addAppToActiveBlock(packageName: String): List<String> {
@@ -75,16 +79,35 @@ class BlockRepository(private val context: Context) {
     }
 
     suspend fun endBlock() {
+        // Limpiar SharedPreferences
+        GuardState.clearBlockState(context)
+
+        // Limpiar DataStore
         context.dataStore.edit { prefs ->
             prefs[Keys.IS_ACTIVE] = false
             prefs[Keys.END_TIME] = 0L
             prefs.remove(Keys.PANIC_PASSWORD_HASH)
         }
-        GuardState.setBlockActive(context, false)
     }
 
-    suspend fun getBlockStateOnce(): BlockState =
-        context.dataStore.data.first().toBlockState()
+    suspend fun getBlockStateOnce(): BlockState {
+        // Intentar DataStore primero
+        val dsState = context.dataStore.data.first().toBlockState()
+        if (dsState.isActive) return dsState
+
+        // Fallback a SharedPreferences si DataStore está vacío
+        if (GuardState.isBlockActive(context)) {
+            return BlockState(
+                isActive = true,
+                endTimeMillis = GuardState.getEndTimeMillis(context),
+                blockedDomains = GuardState.getBlockedDomains(context).toList(),
+                blockedApps = GuardState.getBlockedApps(context).toList(),
+                hasPanicPassword = GuardState.hasPassword(context)
+            )
+        }
+
+        return dsState
+    }
 
     suspend fun getPanicPasswordHash(): String? =
         context.dataStore.data.first()[Keys.PANIC_PASSWORD_HASH]

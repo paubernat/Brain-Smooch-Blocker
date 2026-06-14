@@ -19,6 +19,7 @@
     <string name="protection_setup_prompt">So you can\'t skip the block, enable protection:</string>
     <string name="enable_admin">1. Enable device admin</string>
     <string name="enable_accessibility">2. Enable accessibility</string>
+    <string name="enable_always_on_vpn">3. Enable always-on VPN</string>
     <string name="domain_label">Domain to block</string>
     <string name="domain_placeholder">e.g. twitter.com</string>
     <string name="domain_label_active">Bind another domain</string>

@@ -15,6 +15,10 @@ object GuardState {
     private const val KEY_ACTIVE = "block_active"
     private const val KEY_HARDCORE = "hardcore_mode"
     private const val KEY_BLOCKED_APPS = "blocked_apps"
+    private const val KEY_BLOCKED_DOMAINS = "blocked_domains"
+    private const val KEY_END_TIME = "end_time_millis"
+    private const val KEY_HAS_PASSWORD = "has_password"
+    private const val KEY_ALWAYS_ON_VPN = "always_on_vpn_configured"
 
     private fun prefs(context: Context) =
         context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -42,5 +46,41 @@ object GuardState {
 
     fun clearBlockedApps(context: Context) {
         prefs(context).edit().remove(KEY_BLOCKED_APPS).apply()
+    }
+
+    // Backup del estado completo en SharedPreferences (más robusto que DataStore)
+    fun saveBlockState(
+        context: Context,
+        domains: List<String>,
+        apps: List<String>,
+        endTimeMillis: Long,
+        hasPassword: Boolean
+    ) {
+        prefs(context).edit()
+            .putBoolean(KEY_ACTIVE, true)
+            .putStringSet(KEY_BLOCKED_DOMAINS, domains.toSet())
+            .putStringSet(KEY_BLOCKED_APPS, apps.toSet())
+            .putLong(KEY_END_TIME, endTimeMillis)
+            .putBoolean(KEY_HAS_PASSWORD, hasPassword)
+            .commit()  // commit() es síncrono, más seguro que apply()
+    }
+
+    fun getBlockedDomains(context: Context): Set<String> =
+        prefs(context).getStringSet(KEY_BLOCKED_DOMAINS, emptySet()) ?: emptySet()
+
+    fun getEndTimeMillis(context: Context): Long =
+        prefs(context).getLong(KEY_END_TIME, 0L)
+
+    fun hasPassword(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_HAS_PASSWORD, false)
+
+    fun clearBlockState(context: Context) {
+        prefs(context).edit()
+            .putBoolean(KEY_ACTIVE, false)
+            .remove(KEY_BLOCKED_DOMAINS)
+            .remove(KEY_BLOCKED_APPS)
+            .remove(KEY_END_TIME)
+            .remove(KEY_HAS_PASSWORD)
+            .commit()
     }
 }
