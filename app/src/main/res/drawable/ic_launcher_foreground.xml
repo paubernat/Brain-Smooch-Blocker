@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Brain icon centered in safe zone (24dp padding = 72dp safe area) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,30
+            C42,30 34,38 34,48
+            C34,52 36,56 38,59
+            C36,62 35,66 35,70
+            C35,77 40,82 48,82
+            C50,82 52,81.5 54,80.5
+            C56,81.5 58,82 60,82
+            C68,82 73,77 73,70
+            C73,66 72,62 70,59
+            C72,56 74,52 74,48
+            C74,38 66,30 54,30Z
+            M44,50
+            C44,47 46,45 49,45
+            C49,48 47,50 44,50Z
+            M54,72
+            C51,72 49,70 49,67
+            C49,64 51,62 54,62
+            C57,62 59,64 59,67
+            C59,70 57,72 54,72Z
+            M64,50
+            C61,50 59,48 59,45
+            C62,45 64,47 64,50Z" />
+</vector>

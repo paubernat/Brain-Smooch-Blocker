@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Brain Smooch</string>
+    <string name="notification_channel_name">Block Active</string>
+    <string name="notification_channel_description">Shows when domain blocking is active</string>
+    <string name="alert_channel_name">Alerts</string>
+    <string name="alert_channel_description">Important alerts requiring your attention</string>
+    <string name="vpn_reauth_title">Block paused — tap to resume</string>
+    <string name="vpn_reauth_text">Your phone restarted. Open Brain Smooch to reactivate blocking.</string>
+    <string name="notification_title">Brain Smooch Active</string>
+    <string name="notification_text">Blocking distractions until %1$s</string>
+    <string name="accessibility_label">Brain Smooch Guard</string>
+    <string name="accessibility_description">Brain Smooch uses this service to keep you from disabling the block while it is active. It does not collect or send any data.</string>
+    <string name="guard_blocked_toast">Blocked during Brain Smooch focus</string>
+    <string name="admin_explanation">Brain Smooch needs device admin to keep you from uninstalling the app during a block.</string>
+
+    <!-- Main screen -->
+    <string name="protection_active">Anti-bypass protection active</string>
+    <string name="protection_setup_prompt">So you can\'t skip the block, enable protection:</string>
+    <string name="enable_admin">1. Enable device admin</string>
+    <string name="enable_accessibility">2. Enable accessibility</string>
+    <string name="domain_label">Domain to block</string>
+    <string name="domain_placeholder">e.g. twitter.com</string>
+    <string name="domain_label_active">Bind another domain</string>
+    <string name="add">Add</string>
+    <string name="remove">Remove</string>
+    <string name="block_duration">Block Duration</string>
+    <string name="days_label">Days</string>
+    <string name="hours_label">Hours</string>
+    <string name="minutes_label">Min</string>
+    <string name="hardcore_title">Hardcore mode</string>
+    <string name="hardcore_on_desc">You won\'t be able to uninstall the app or stop the block (only exit: emergency password).</string>
+    <string name="hardcore_off_desc">Normal block: you can uninstall or stop whenever you want.</string>
+    <string name="emergency_password_label">Emergency password (optional)</string>
+    <string name="emergency_password_required">Emergency password (required)</string>
+    <string name="emergency_password_hint">Leave empty and there is no early exit</string>
+    <string name="emergency_password_unlimited_hint">Required for hardcore, unlimited, or 1+ day blocks</string>
+    <string name="emergency_password_confirm_label">Repeat password</string>
+    <string name="password_mismatch">Passwords don\'t match</string>
+    <string name="start_block">Smooch me brain</string>
+    <string name="unlimited_mode">Unlimited</string>
+    <string name="unlimited_desc">No timer — block runs until emergency release</string>
+    <string name="block_active">The Binding Holds</string>
+    <string name="remaining">remaining</string>
+    <string name="unlimited_display">UNLIMITED</string>
+    <string name="blocked_domains">Bound domains</string>
+    <string name="blocked_apps">Bound apps</string>
+
+    <!-- Tabs -->
+    <string name="tab_domains">Websites</string>
+    <string name="tab_apps">Apps</string>
+    <string name="search_apps">Search apps…</string>
+    <string name="app_blocked_toast">App blocked by Brain Smooch</string>
+    <string name="enable_usage_stats">Enable usage access</string>
+    <string name="usage_stats_needed">To block apps, grant usage access permission</string>
+
+    <!-- Smooch overlay -->
+    <string name="smooch_question">Smooch?</string>
+
+    <!-- Release dialog -->
+    <string name="release_button">Release block</string>
+    <string name="release_title">Release Block</string>
+    <string name="release_prompt">Enter your emergency password:</string>
+    <string name="release_no_password">No emergency password was set for this block — it cannot be ended early.</string>
+    <string name="release_wrong_password">Wrong password</string>
+    <string name="release_submit">Release</string>
+    <string name="release_cancel">Cancel</string>
+
+    <!-- Confirmation dialogs -->
+    <string name="confirm_title_1">Are you sure?</string>
+    <string name="confirm_message_1">You\'re about to lock yourself out of these sites. This isn\'t a joke.</string>
+    <string name="confirm_yes">Yes, do it</string>
+    <string name="confirm_no">Nevermind</string>
+    <string name="confirm_title_2">Last chance.</string>
+    <string name="confirm_message_2_password">If you forget your password, there is NO way to end this block early. Write it down. Tell someone. If nobody remembers, you\'re stuck until the timer runs out.</string>
+    <string name="confirm_message_2_unlimited">This block has NO timer. If you forget your password, there is NO escape. Your only options will be factory reset or waiting for divine intervention. Write the password down. Tell someone you trust.</string>
+    <string name="confirm_wait">Wait %1$d…</string>
+    <string name="confirm_final">I understand, lock me in</string>
+</resources>
