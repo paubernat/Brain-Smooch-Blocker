@@ -2,6 +2,11 @@
 
 Android app that blocks access to distracting websites and apps for a set duration. Like SelfControl for macOS, but for Android.
 
+<p align="center">
+  <img src="screenshots/setup.png" width="280" alt="Setup screen" />
+  <img src="screenshots/blocking.png" width="280" alt="Block active" />
+</p>
+
 ## Features
 
 - **Website Blocking**: Local VPN DNS sinkhole blocks domains (no external servers)
