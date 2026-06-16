@@ -10,6 +10,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -26,7 +27,9 @@ class MainActivity : ComponentActivity() {
     ) { result ->
         viewModel.onVpnPrepared()
         if (result.resultCode == RESULT_OK) {
-            viewModel.requestStartBlock()
+            viewModel.onVpnConsentGranted()
+        } else {
+            viewModel.onVpnConsentDenied()
         }
     }
 
@@ -63,6 +66,13 @@ class MainActivity : ComponentActivity() {
         viewModel.refreshPermissions()
     }
 
+    private val vpnSettingsLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        // User may have disconnected the conflicting VPN — re-check so the warning clears.
+        viewModel.refreshPermissions()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -70,12 +80,14 @@ class MainActivity : ComponentActivity() {
         setContent {
             val uiState by viewModel.uiState.collectAsState()
 
+            // Launch each consent dialog exactly once per intent (keyed), instead of on every
+            // recomposition — launching from the composition body can fire multiple times.
             uiState.vpnPrepareIntent?.let { intent ->
-                vpnPermissionLauncher.launch(intent)
+                LaunchedEffect(intent) { vpnPermissionLauncher.launch(intent) }
             }
 
             uiState.vpnResumeIntent?.let { intent ->
-                vpnResumeLauncher.launch(intent)
+                LaunchedEffect(intent) { vpnResumeLauncher.launch(intent) }
             }
 
             BrainSmoochTheme {
@@ -95,16 +107,8 @@ class MainActivity : ComponentActivity() {
                         onMinutesChange = viewModel::updateMinutes,
                         onBlockPasswordChange = viewModel::updateBlockPassword,
                         onBlockPasswordConfirmChange = viewModel::updateBlockPasswordConfirm,
-                        onStartBlock = {
-                            if (viewModel.prepareVpn()) {
-                                viewModel.requestStartBlock()
-                            }
-                        },
-                        onStartBlockAfterSmooch = {
-                            if (viewModel.prepareVpn()) {
-                                viewModel.startBlockAfterSmooch()
-                            }
-                        },
+                        onStartBlock = viewModel::beginRequestStart,
+                        onStartBlockAfterSmooch = viewModel::beginStartAfterSmooch,
                         onConfirmStep1 = viewModel::confirmStep1,
                         onCancelConfirmation = viewModel::cancelConfirmation,
                         onUnlimitedModeChange = viewModel::setUnlimitedMode,
@@ -121,7 +125,11 @@ class MainActivity : ComponentActivity() {
                         },
                         onReleaseBlock = viewModel::showReleaseDialog,
                         onPanicPasswordSubmit = viewModel::tryPanicRelease,
-                        onPanicDismiss = viewModel::dismissPanicDialog
+                        onPanicDismiss = viewModel::dismissPanicDialog,
+                        onOpenVpnSettings = {
+                            vpnSettingsLauncher.launch(viewModel.vpnSettingsIntent())
+                        },
+                        onDismissVpnConflict = viewModel::dismissVpnConflictDialog
                     )
                 }
             }

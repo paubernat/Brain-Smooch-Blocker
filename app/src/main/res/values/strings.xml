@@ -39,6 +39,14 @@
     <string name="emergency_password_confirm_label">Repeat password</string>
     <string name="password_mismatch">Passwords don\'t match</string>
     <string name="start_block">Smooch me brain</string>
+    <string name="need_content">Add at least one app or website to block</string>
+    <string name="need_duration">Set a block duration</string>
+    <string name="need_password">Enter and confirm your emergency password</string>
+    <string name="vpn_conflict_warning">Another VPN is active. Website blocking needs Brain Smooch to be your VPN — Android allows only one at a time.</string>
+    <string name="vpn_conflict_open_settings">Open VPN settings</string>
+    <string name="vpn_conflict_title">Couldn\'t start website blocking</string>
+    <string name="vpn_conflict_message">Brain Smooch needs to be your active VPN, but another VPN is using that slot (Android allows only one). Open VPN settings, disconnect the other VPN (and turn off its \"Always-on\"), then try again.\n\nApp blocking works without a VPN.</string>
+    <string name="vpn_conflict_dismiss">Got it</string>
     <string name="unlimited_mode">Unlimited</string>
     <string name="unlimited_desc">No timer — block runs until emergency release</string>
     <string name="block_active">The Binding Holds</string>

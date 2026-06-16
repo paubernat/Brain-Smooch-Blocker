@@ -172,24 +172,28 @@ fun MainScreen(
     onReleaseBlock: () -> Unit,
     onPanicPasswordSubmit: (String, (Boolean) -> Unit) -> Unit,
     onPanicDismiss: () -> Unit,
+    onOpenVpnSettings: () -> Unit,
+    onDismissVpnConflict: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var showSmoochOverlay by remember { mutableStateOf(false) }
     var showHeartExplosion by remember { mutableStateOf(false) }
-    var waitingForBlock by remember { mutableStateOf(false) }
-
-    // Clear waiting state once block is active
-    LaunchedEffect(uiState.blockState.isActive) {
-        if (uiState.blockState.isActive) {
-            waitingForBlock = false
-        }
-    }
 
     if (uiState.showPanicDialog) {
         ReleaseDialog(
             hasPassword = uiState.blockState.hasPanicPassword,
             onSubmit = onPanicPasswordSubmit,
             onDismiss = onPanicDismiss
+        )
+    }
+
+    if (uiState.showVpnConflictDialog) {
+        VpnConflictDialog(
+            onOpenSettings = {
+                onDismissVpnConflict()
+                onOpenVpnSettings()
+            },
+            onDismiss = onDismissVpnConflict
         )
     }
 
@@ -217,7 +221,7 @@ fun MainScreen(
             .background(animatedGradient())
     ) {
         // Hide content during heart explosion and while waiting for block to activate
-        if (!showHeartExplosion && !waitingForBlock) {
+        if (!showHeartExplosion && !uiState.isStarting) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -294,7 +298,9 @@ fun MainScreen(
                             }
                         },
                         hardcoreMode = uiState.hardcoreMode,
-                        onHardcoreModeChange = onHardcoreModeChange
+                        onHardcoreModeChange = onHardcoreModeChange,
+                        otherVpnActive = uiState.otherVpnActive,
+                        onOpenVpnSettings = onOpenVpnSettings
                     )
                 }
             }
@@ -316,7 +322,7 @@ fun MainScreen(
                 onFinished = {
                     showHeartExplosion = false
                     showSmoochOverlay = false
-                    waitingForBlock = true
+                    // VM owns the "starting" overlay (uiState.isStarting) from here on.
                     onStartBlockAfterSmooch()
                 }
             )
@@ -583,6 +589,21 @@ private fun ProtectionStatus(
     Spacer(modifier = Modifier.height(16.dp))
 }
 
+@Composable
+private fun VpnConflictDialog(onOpenSettings: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.vpn_conflict_title)) },
+        text = { Text(stringResource(R.string.vpn_conflict_message)) },
+        confirmButton = {
+            TextButton(onClick = onOpenSettings) { Text(stringResource(R.string.vpn_conflict_open_settings)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.vpn_conflict_dismiss)) }
+        }
+    )
+}
+
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun DomainInput(value: String, label: String, onValueChange: (String) -> Unit, onAdd: () -> Unit, modifier: Modifier = Modifier) {
@@ -714,9 +735,31 @@ private fun SetupScreen(
     onDaysChange: (Int) -> Unit, onHoursChange: (Int) -> Unit, onMinutesChange: (Int) -> Unit,
     onUnlimitedModeChange: (Boolean) -> Unit, onBlockPasswordChange: (String) -> Unit,
     onBlockPasswordConfirmChange: (String) -> Unit, onEnableUsageStats: () -> Unit,
-    onStartBlock: () -> Unit, hardcoreMode: Boolean, onHardcoreModeChange: (Boolean) -> Unit
+    onStartBlock: () -> Unit, hardcoreMode: Boolean, onHardcoreModeChange: (Boolean) -> Unit,
+    otherVpnActive: Boolean, onOpenVpnSettings: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
+        // Website blocking needs Brain Smooch to own the single VPN slot — warn if another VPN has it.
+        if (domains.isNotEmpty() && otherVpnActive) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        stringResource(R.string.vpn_conflict_warning),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(onClick = onOpenVpnSettings, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.vpn_conflict_open_settings))
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
         // Compact tabs as segmented buttons
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
             SegmentedTabButton(
@@ -802,7 +845,7 @@ private fun SetupScreen(
             singleLine = true, modifier = Modifier.fillMaxWidth()
         )
 
-        if (blockPassword.isNotEmpty()) {
+        if (requiresPassword || blockPassword.isNotEmpty()) {
             Spacer(modifier = Modifier.height(4.dp))
             OutlinedTextField(
                 value = blockPasswordConfirm, onValueChange = onBlockPasswordConfirmChange,
@@ -824,6 +867,26 @@ private fun SetupScreen(
         Spacer(modifier = Modifier.height(16.dp))
         Button(onClick = onStartBlock, enabled = canStart, shape = CircleShape, modifier = Modifier.fillMaxWidth().height(48.dp)) {
             Text(stringResource(R.string.start_block), style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold))
+        }
+
+        if (!canStart) {
+            // canStart fails in priority order: content, then duration, then the password
+            // (mismatch, or required-but-blank) — so the remaining case is always the password.
+            val hasContent = domains.isNotEmpty() || apps.isNotEmpty()
+            val hasDuration = unlimitedMode || days > 0 || hours > 0 || minutes > 0
+            val hintRes = when {
+                !hasContent -> R.string.need_content
+                !hasDuration -> R.string.need_duration
+                else -> R.string.need_password
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                stringResource(hintRes),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
         Spacer(modifier = Modifier.height(8.dp))
     }

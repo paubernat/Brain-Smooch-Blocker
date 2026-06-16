@@ -2,6 +2,8 @@ package com.brainsmooch.viewmodel
 
 import android.app.Application
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.VpnService
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -23,6 +25,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 enum class BlockTab { DOMAINS, APPS }
+
+/** What to run once VPN consent comes back, since both the pre-smooch and post-smooch paths can trigger it. */
+private enum class PendingStart { NONE, REQUEST, AFTER_SMOOCH }
 
 data class UiState(
     val blockState: BlockState = BlockState(),
@@ -48,7 +53,10 @@ data class UiState(
     val vpnPrepareIntent: Intent? = null,
     val vpnResumeIntent: Intent? = null,
     val showPanicDialog: Boolean = false,
-    val confirmationStep: Int = 0
+    val confirmationStep: Int = 0,
+    val isStarting: Boolean = false,
+    val otherVpnActive: Boolean = false,
+    val showVpnConflictDialog: Boolean = false
 ) {
     val isFullyProtected: Boolean
         get() = isAdminActive && isAccessibilityEnabled && isAlwaysOnVpnEnabled
@@ -99,7 +107,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             repository.blockState.collect { blockState ->
                 _uiState.update {
-                    it.copy(blockState = blockState, remainingMillis = blockState.remainingMillis)
+                    it.copy(
+                        blockState = blockState,
+                        remainingMillis = blockState.remainingMillis,
+                        // Block is live: clear the "starting" overlay so the active screen shows.
+                        isStarting = if (blockState.isActive) false else it.isStarting
+                    )
                 }
             }
         }
@@ -215,18 +228,55 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(blockPasswordConfirm = password) }
     }
 
-    fun prepareVpn(): Boolean {
+    private var pendingStart = PendingStart.NONE
+
+    /**
+     * Ensures VPN consent before [after] runs. Returns true when the caller may proceed
+     * immediately; returns false after stashing [after] and triggering the consent dialog.
+     * App-only blocks need no VPN (see [executeStartBlock]), so consent is skipped entirely.
+     */
+    private fun prepareVpn(after: PendingStart): Boolean {
         if (TEST_MODE) return true
+        if (_uiState.value.domains.isEmpty()) return true
         val intent = VpnService.prepare(getApplication())
         if (intent != null) {
+            pendingStart = after
             _uiState.update { it.copy(vpnPrepareIntent = intent) }
             return false
         }
         return true
     }
 
+    /** Pre-smooch entry (hardcore/unlimited): runs the confirmation flow once VPN is ready. */
+    fun beginRequestStart() {
+        if (prepareVpn(PendingStart.REQUEST)) requestStartBlock()
+    }
+
+    /** Post-smooch entry (all modes): actually starts the block once VPN is ready. */
+    fun beginStartAfterSmooch() {
+        _uiState.update { it.copy(isStarting = true) }
+        if (prepareVpn(PendingStart.AFTER_SMOOCH)) startBlockAfterSmooch()
+    }
+
     fun onVpnPrepared() {
         _uiState.update { it.copy(vpnPrepareIntent = null) }
+    }
+
+    fun onVpnConsentGranted() {
+        val action = pendingStart
+        pendingStart = PendingStart.NONE
+        when (action) {
+            PendingStart.REQUEST -> requestStartBlock()
+            PendingStart.AFTER_SMOOCH -> startBlockAfterSmooch()
+            PendingStart.NONE -> {}
+        }
+    }
+
+    fun onVpnConsentDenied() {
+        pendingStart = PendingStart.NONE
+        // Recover from the post-smooch "starting" overlay so we don't hang on a blank gradient,
+        // and explain the likely cause: another VPN holding the slot.
+        _uiState.update { it.copy(isStarting = false, showVpnConflictDialog = true) }
     }
 
     fun onVpnResumed() {
@@ -247,9 +297,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 isAccessibilityEnabled = BlockGuardAccessibilityService.isEnabled(getApplication()),
                 hasUsageStatsPermission = AppBlockerManager.hasUsageStatsPermission(getApplication()),
                 isAlwaysOnVpnEnabled = isAlwaysOnVpnEnabled(),
-                hardcoreMode = GuardState.isHardcore(getApplication())
+                hardcoreMode = GuardState.isHardcore(getApplication()),
+                otherVpnActive = isOtherVpnActive()
             )
         }
+    }
+
+    /**
+     * True when some *other* app holds the single VPN slot (Android allows only one active VPN).
+     * Website blocking can't start until that VPN is disconnected, so the UI warns the user.
+     */
+    private fun isOtherVpnActive(): Boolean {
+        if (BlockerVpnService.running) return false
+        val cm = getApplication<Application>()
+            .getSystemService(ConnectivityManager::class.java) ?: return false
+        return cm.allNetworks.any { network ->
+            cm.getNetworkCapabilities(network)?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true
+        }
+    }
+
+    fun dismissVpnConflictDialog() {
+        _uiState.update { it.copy(showVpnConflictDialog = false) }
     }
 
     private fun isAlwaysOnVpnEnabled(): Boolean {
@@ -304,7 +372,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun startBlockAfterSmooch() {
         val state = _uiState.value
-        if (!canStart(state)) return
+        if (!canStart(state)) {
+            _uiState.update { it.copy(isStarting = false) }
+            return
+        }
         executeStartBlock()
     }
 

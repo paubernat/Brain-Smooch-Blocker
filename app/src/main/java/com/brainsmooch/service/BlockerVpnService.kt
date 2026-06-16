@@ -38,6 +38,11 @@ class BlockerVpnService : VpnService() {
     private val lastBellMillis = ConcurrentHashMap<String, Long>()
 
     companion object {
+        /** True while our tunnel is established — lets the UI tell our VPN apart from a foreign one. */
+        @Volatile
+        var running: Boolean = false
+            private set
+
         const val CHANNEL_ID = "brain_smooch_vpn"
         const val NOTIFICATION_ID = 1
         const val ACTION_START = "com.brainsmooch.START_VPN"
@@ -169,6 +174,7 @@ class BlockerVpnService : VpnService() {
             .setBlocking(false)
 
         vpnInterface = builder.establish()
+        running = vpnInterface != null
 
         vpnInterface?.let { pfd ->
             scope.launch { handleDnsRequests(pfd) }
@@ -177,6 +183,7 @@ class BlockerVpnService : VpnService() {
 
     private fun stopVpn() {
         isRunning = false
+        running = false
         scope.cancel()
         vpnInterface?.close()
         vpnInterface = null
